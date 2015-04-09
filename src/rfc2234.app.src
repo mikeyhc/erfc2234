@@ -1,0 +1,14 @@
+{application, rfc2234,
+ [
+  {description, "An Erlang rfc2234 library"},
+  {vsn, "1"},
+  {modules, [
+             rfc2234
+            ]},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]}.
