@@ -1,3 +1,2 @@
 language: erlang
-release:
-    - 17
+sudo: false
