@@ -210,11 +210,7 @@ lwsp(X) when is_binary(X) ->
 lwsp(X) -> error({badarg, X}).
 
 %% match any character
-octet(X) when is_binary(X) ->
-    <<H, T/binary>> = X,
-    if H >= 0 andalso H =< 255 -> {H, T};
-       true -> throw({parse_error, expected, "any 8-bit character"})
-    end;
+octet(X) when is_binary(X) -> <<H, T/binary>> = X, {H, T};
 octet(X) -> error({badarg, X}).
 
 %% match the space.
