@@ -11,7 +11,10 @@
 -module(rfc2234).
 %-compile(export_all).
 -export([% parser combinators
-         many/3, many1/3, option/4, either/6, case_char/2, case_string/2,
+         many/3, many1/3, option/4, either/6,
+
+         % generic parsers
+         case_char/2, case_string/2,
 
          % primitive parsers
          alpha/1, bit/1, character/1, cr/1, lf/1, crlf/1, ctl/1, dquote/1,
@@ -34,7 +37,8 @@ many(M, F, A) ->
         {Acc, T} = many(M, F, Y),
         {[X|Acc], T}
     catch
-        {parse_error, expected, _} -> {[], A}
+        {parse_error, expected, _} -> {[], A};
+        {badmatch, <<>>}          -> {[], A}
     end.
 
 %% match 1 or more times using M:F(A)
@@ -70,10 +74,14 @@ either(M1, F1, M2, F2, A, Err) ->
 to_lower(C) when C >= 65 andalso C =< 90 -> C + 32;
 to_lower(C) -> C.
 
+%%%%%%%%%%%%%%%%%%%%%%%
+%%% Generic Parsers %%%
+%%%%%%%%%%%%%%%%%%%%%%%
+
 %% case insensitive character match
 case_char(C, S) when is_binary(S) andalso is_integer(C) ->
     <<H, T/binary>> = S,
-    case to_lower(S) == to_lower(C) of
+    case to_lower(H) == to_lower(C) of
         true -> {H,T};
         false -> throw({parse_error, expected, C})
     end;
@@ -261,10 +269,10 @@ qcont(X) ->
     either(rfc2234, qtext, rfc2234, quoted_pair, X,
            "quoted text or quoted pair").
 
-%% a single character which is valid in a quoted string
+%% a binary which is valid in a quoted string
 qtext(X) when is_binary(X) ->
     <<H, T/binary>> = X,
-    if X == 10 orelse H == 13 ->
+    if H == 10 orelse H == 13 orelse H == 32->
            throw({parse_error, expected, "quoted text"});
        true -> {H, T}
     end;

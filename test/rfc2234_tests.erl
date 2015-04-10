@@ -29,12 +29,32 @@ list_2() -> lists:concat(lists:map(fun(X) ->
                 lists:map(fun(Y) -> <<X,Y>> end, lists:seq(0, 255))
                 end, lists:seq(0,255))).
 
-%% all combinations of 8 bit strings of length 2
-
-
 %% the list of all common types which are not binary
 nonbinary_typeset() -> [ [], a, "", 0.0, fun() -> io:format("oh no~n") end,
                          {a, tuple}].
+
+%%%%%%%%%%%%%%%%%%%%%%%
+%%% Generic Parsers %%%
+%%%%%%%%%%%%%%%%%%%%%%%
+
+% test case insensitive charcter matches
+case_char_test_() ->
+    [ lists:map(
+        fun(X) ->
+            [ ?_assertEqual({X, <<>>}, rfc2234:case_char(X, <<X>>)),
+              ?_assertEqual({X + 32, <<>>},
+                            rfc2234:case_char(X, <<(X + 32)>>)) ]
+        end,
+        lists:seq(65, 90)),
+      lists:map(fun(X) ->
+        lists:map(fun(Y) ->
+            ?_assertThrow({parse_error, expected, X},
+                          rfc2234:case_char(X, <<Y>>))
+                  end,
+                  lists:subtract(alphaset(), [X, X+32]))
+                end,
+                lists:seq(65, 90))
+    ].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Primitive Parsers %%%
@@ -163,3 +183,5 @@ quoted_pair_test_() ->
     Fails = lists:subtract(list_2(),
                            lists:map(fun({X, _, _}) -> X end, Passes)),
     test_helper_(rfc2234, quoted_pair, Passes, Fails, nonbinary_typeset()).
+
+%% test qtex/1, accepts binary strings not containing \r or \n, returns on  "
