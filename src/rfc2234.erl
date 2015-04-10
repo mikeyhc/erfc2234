@@ -225,7 +225,7 @@ sp(X) -> error({badarg, X}).
 %% That is any character in the decimal range of [33..126]
 vchar(X) when is_binary(X) ->
     <<H, T/binary>> = X,
-    if X >= 33 andalso X =< 126 -> {H, T};
+    if H >= 33 andalso H =< 126 -> {H, T};
        true -> throw({parse_error, expected, "printable character"})
     end;
 vchar(X) -> error({badarg, X}).
@@ -241,9 +241,10 @@ wsp(X) -> error({badarg, X}).
 
 %% match a "quoted pair". Any characters (excluding CR and LF) may be quoted.
 quoted_pair(X)  when is_binary(X) ->
-    <<92, H, T/binary>> = X,
-    if H == 10 orelse H == 13 -> throw({parse_error, expected, "quoted pair"});
-       true -> {<<94,H>>, T}
+    <<H, I, T/binary>> = X,
+    if H /= 92 orelse I == 10 orelse I == 13 ->
+           throw({parse_error, expected, "quoted pair"});
+       true -> {<<H,I>>, T}
     end;
 quoted_pair(X) -> error({badarg, X}).
 

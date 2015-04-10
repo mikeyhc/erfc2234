@@ -117,7 +117,13 @@ htab_test_() ->
     Fails = lists:delete(<<"\t">>, list_1()),
     test_helper_(rfc2234, htab, Passes, Fails, nonbinary_typeset()).
 
-%% TODO: lwsp/1 tests
+%% test lwsp/1, this should accept any valid linear whitespace
+%lwsp_test_() ->
+%    Passes = lists:map(fun(X) -> {X, X, <<>>} end,
+%                       [<<"  \r\n ">>, <<" \r\n\t">>, <<"\t\r\n">>,
+%                        <<"\r\n ">>, <<" ">>, <<"\t">>]),
+%    Fails = [<<"a">>, <<"\r\n">>],
+%    test_helper_(rfc2234, lwsp, Passes, Fails, nonbinary_typeset()).
 
 %% test octet/1, accepts any octet [0..255]
 %% NOTE: type constraints mean there are no fail tests for this
@@ -130,3 +136,30 @@ sp_test_() ->
     Passes = [{<<" ">>, 32, <<>>}],
     Fails = lists:delete(<<" ">>, list_1()),
     test_helper_(rfc2234, sp, Passes, Fails, nonbinary_typeset()).
+
+%% test vchar/1, accepts visible characters [33..126]
+vchar_test_() ->
+    Codes = lists:seq(33, 126),
+    Passes = lists:map(fun(X) -> {<<X>>, X, <<>>} end, Codes),
+    Fails = lists:subtract(list_1(), lists:map(fun(X) -> <<X>> end, Codes)),
+    test_helper_(rfc2234, vchar, Passes, Fails, nonbinary_typeset()).
+
+%% test wsp/1, accepts \t or ' ' [9, 32]
+wsp_test_() ->
+    Codes = [9, 32],
+    Passes = lists:map(fun(X) -> {<<X>>, X, <<>>} end, Codes),
+    Fails = lists:subtract(list_1(), lists:map(fun(X) -> <<X>> end, Codes)),
+    test_helper_(rfc2234, wsp, Passes, Fails, nonbinary_typeset()).
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Useful Additions %%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% test quoted_pair/1, accepts \X where X is a character that is not CR or LF
+quoted_pair_test_() ->
+    Passes = lists:map(fun(<<Y>>) -> {<<"\\",Y>>, <<"\\",Y>>, <<>>} end,
+                       lists:filter(fun(<<X>>) -> X /= 10 andalso X /= 13 end,
+                                    list_1())),
+    Fails = lists:subtract(list_2(),
+                           lists:map(fun({X, _, _}) -> X end, Passes)),
+    test_helper_(rfc2234, quoted_pair, Passes, Fails, nonbinary_typeset()).
