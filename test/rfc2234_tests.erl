@@ -248,11 +248,11 @@ quoted_pair_test_() ->
     ?test_helper_(rfc2234, quoted_pair, Passes, Fails, nonbinary_typeset()).
 
 %% test quoted_string/1, accepts a quoted string
-% quoted_string_test_() ->
-%    Passes = lists:map(fun(X) -> {X, X, <<>>} end,
-%                       [ <<"\"abc\"">>, <<"\"ab\b\"">>,
-%                         <<"\"abDD  \"">>, <<"\"a\b\l\\\"\"">> ]),
-%    test_helper_(rfc2234, quoted_string, Passes, [[]], nonbinary_typeset()).
+quoted_string_test_() ->
+    Passes = lists:map(fun(X) -> {X, X, <<>>} end,
+                       [ <<"\"abc\"">>, <<"\"ab\b\"">>,
+                         <<"\"abDD  \"">>, <<"\"a\b\l\\\"\"">> ]),
+    ?test_helper_(rfc2234, quoted_string, Passes, [], nonbinary_typeset()).
 
 %% test qtext/1, accepts any character that is not \r \n or "
 qtext_test_() ->

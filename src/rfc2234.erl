@@ -299,7 +299,8 @@ quoted_string(X) when is_binary(X) ->
     {OQ, T1} = dquote(X),
     {C, T2} = many(rfc2234, qcont, T1),
     {CQ, T3} = dquote(T2),
-    {<<OQ,C/binary,CQ/binary>>, T3}.
+    {<<OQ,C/binary,CQ>>, T3};
+quoted_string(X) -> error({badarg, X}).
 
 %% match the contents of a quoted string
 qcont(X) ->
