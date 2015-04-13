@@ -13,6 +13,9 @@
 -export([% parser combinators
          many/3, many1/3, option/4, either/6, both/6,
 
+         % type construction
+         bin_join/2,
+
          % generic parsers
          case_char/2, case_string/2,
 
@@ -35,7 +38,7 @@ many(M, F, A) ->
     try
         {X, Y} = apply_many(M, F, A),
         {Acc, T} = many(M, F, Y),
-        {<<X, Acc/binary>>, T}
+        {bin_join(X, Acc), T}
     catch
         {parse_error, expected, _} -> {<<>>, A};
         error:{badmatch, <<>>}     -> {<<>>, A}
@@ -92,7 +95,7 @@ bin_join(X, Y) when is_binary(X) andalso is_binary(Y) ->
     <<X/binary, Y/binary>>;
 bin_join(X, Y) when is_integer(X) andalso is_binary(Y) ->
     <<X, Y/binary>>;
-bin_join(X, Y) when is_binary(X) andalso is_integer(y) ->
+bin_join(X, Y) when is_binary(X) andalso is_integer(Y) ->
     <<X/binary, Y>>;
 bin_join(X, Y) -> <<X, Y>>.
 
