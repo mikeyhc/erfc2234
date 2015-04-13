@@ -76,32 +76,6 @@ int_list_to_pass_set(L) -> lists:map(fun(X) -> {<<X>>, X, <<>>} end, L).
 % turns a set of binaries into a pass set
 bin_list_to_pass_set(L) -> lists:map(fun(X) -> {X, X, <<>>} end, L).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Parser Combinators %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-many_test_() -> [ ?_assertEqual({<<>>, <<>>},
-                                rfc2234:many(rfc2234, alpha, <<>>)) ].
-
-option_test_() -> [ ?_assertEqual(
-                       {<<>>, <<"0">>},
-                       rfc2234:option(<<>>, rfc2234, alpha, <<"0">>)) ].
-
-both_test_() -> [ ?_assertThrow({parse_error, expected, _},
-                                rfc2234:both(rfc2234, alpha,
-                                             rfc2234, alpha,
-                                             <<"a0">>, "two charcters")) ].
-
-%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Type Construction %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%
-
-bin_join_test_() ->
-    [ ?_assertEqual(<<"abc">>, rfc2234:bin_join(97, <<"bc">>)),
-      ?_assertEqual(<<"abc">>, rfc2234:bin_join(<<"ab">>, 99)),
-      ?_assertEqual(<<"aa">>, rfc2234:bin_join(97, 97))
-    ].
-
 %%%%%%%%%%%%%%%%%%%%%%%
 %%% Generic Parsers %%%
 %%%%%%%%%%%%%%%%%%%%%%%
@@ -240,10 +214,11 @@ wsp_test_() ->
 
 %% test quoted_pair/1, accepts \X where X is a character that is not CR or LF
 quoted_pair_test_() ->
-    Passes = lists:map(fun(<<Y>>) -> {<<"\\",Y>>, <<"\\",Y>>, <<>>} end,
-                       lists:filter(fun(<<X>>) -> X /= 10 andalso X /= 13 end,
-                                    list_1())),
-    Fails = lists:concat([gen_rand_n(8, 2, Passes),
+    Passes = lists:map(fun(Y) -> {<<"\\",Y>>, <<"\\",Y>>, <<>>} end,
+                       lists:filter(fun(X) -> X /= 10 andalso X /= 13 end,
+                                    lists:seq(0,255))),
+    Fails = lists:concat([gen_rand_n(8, 2, lists:map(fun({X, _, _}) -> X end,
+                                                    Passes)),
                           [<<"\\\r">>, <<"\\\n">>]]),
     ?test_helper_(rfc2234, quoted_pair, Passes, Fails, nonbinary_typeset()).
 

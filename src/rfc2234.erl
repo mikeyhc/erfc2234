@@ -10,13 +10,7 @@
 
 -module(rfc2234).
 %-compile(export_all).
--export([% parser combinators
-         many/3, many1/3, option/4, either/6, both/6,
-
-         % type construction
-         bin_join/2,
-
-         % generic parsers
+-export([% generic parsers
          case_char/2, case_string/2,
 
          % primitive parsers
@@ -28,76 +22,6 @@
 
          % useful additions
          quoted_pair/1, quoted_string/1]).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Parser Combinators %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%% match 0 or more times using M:F(A)
-many(M, F, A) ->
-    try
-        {X, Y} = apply_many(M, F, A),
-        {Acc, T} = many(M, F, Y),
-        {bin_join(X, Acc), T}
-    catch
-        {parse_error, expected, _} -> {<<>>, A};
-        error:{badmatch, <<>>}     -> {<<>>, A}
-    end.
-
-%% match 1 or more times using M:F(A)
-many1(M, F, A) ->
-    {X, Y} = apply_many(M, F, A),
-    {Acc, T} = many(M, F, Y),
-    {<<X, Acc/binary>>, T}.
-
-apply_many(M, F, A) when is_list(A) -> apply(M, F, A);
-apply_many(M, F, A) -> M:F(A).
-
-%% tries to match M:F(A), but if that fails will return {Def, A}
-option(Def, M, F, A) ->
-    try
-        apply_many(M, F, A)
-    catch
-        {parse_error, expected, _} -> {Def, A}
-    end.
-
-%% tries to match one or the other, if both fail the error is thrown
-either(M1, F1, M2, F2, A, Err) ->
-    try
-        M1:F1(A)
-    catch
-        {parse_error, expected, _} -> either_(M2, F2, A, Err);
-        error:{badmatch, _} -> either_(M2, F2, A, Err)
-    end.
-
-either_(M, F, A, Err) ->
-    try
-        M:F(A)
-    catch
-        {parse_error, expected, _} -> throw({parse_error, expected, Err});
-        error:{badmatch, _} -> throw({parse_error, expected, Err})
-    end.
-
-% tries to match both, if either fail it throws a parse error with the given
-% message
-both(M1, F1, M2, F2, A, Err) ->
-    try
-        {H1, T1} = apply_many(M1, F1, A),
-        {H2, T2} = apply_many(M2, F2, T1),
-        {bin_join(H1, H2), T2}
-    catch
-        {parse_error, expected, _} -> throw({parse_error, expected, Err});
-        error:{badmatch, _} -> throw({parse_error, expected, Err})
-    end.
-
-% joins characters and binarys
-bin_join(X, Y) when is_binary(X) andalso is_binary(Y) ->
-    <<X/binary, Y/binary>>;
-bin_join(X, Y) when is_integer(X) andalso is_binary(Y) ->
-    <<X, Y/binary>>;
-bin_join(X, Y) when is_binary(X) andalso is_integer(Y) ->
-    <<X/binary, Y>>;
-bin_join(X, Y) -> <<X, Y>>.
 
 
 %% converts an uppercase character to its lowercase version, if
@@ -238,17 +162,17 @@ htab(X) -> error({badarg, X}).
 %% match "linear white-space". That is any number of consecutive 'wsp',
 %% optionally followed by a 'crlf' and (at least) one more 'wsp'.
 lwsp(X) when is_binary(X) ->
-    {H1, T1} = option(<<>>, rfc2234, many, [rfc2234, wsp, X]),
+    {H1, T1} = parserlang:option(<<>>, parserlang, many, [rfc2234, wsp, X]),
     {H2, T2} = try
-                   both(rfc2234, crlf, rfc2234, lwsp_, T1,
-                        "crlf followed by whitespace")
+                   parserlang:both(rfc2234, crlf, rfc2234, lwsp_, T1,
+                                   "crlf followed by whitespace")
                catch
                    {parse_error, expected, _} -> {<<>>, T1}
                end,
     {<<H1/binary, H2/binary>>, T2};
 lwsp(X) -> error({badarg, X}).
 
-lwsp_(X) -> many1(rfc2234, wsp, X).
+lwsp_(X) -> parserlang:many1(rfc2234, wsp, X).
 
 %% match any character
 octet(X) when is_binary(X) -> <<H, T/binary>> = X, {H, T};
@@ -273,7 +197,7 @@ vchar(X) -> error({badarg, X}).
 
 %% match either 'sp' or 'htab'
 wsp(X) when is_binary(X) ->
-    either(rfc2234, sp, rfc2234, htab, X, "white-space");
+    parserlang:either(rfc2234, sp, rfc2234, htab, X, "white-space");
 wsp(X) -> error({badarg, X}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%
@@ -297,15 +221,15 @@ quoted_pair(X) -> error({badarg, X}).
 %% a quoted string; CR and LF are not allowed at all
 quoted_string(X) when is_binary(X) ->
     {OQ, T1} = dquote(X),
-    {C, T2} = many(rfc2234, qcont, T1),
+    {C, T2} = parserlang:many(rfc2234, qcont, T1),
     {CQ, T3} = dquote(T2),
     {<<OQ,C/binary,CQ>>, T3};
 quoted_string(X) -> error({badarg, X}).
 
 %% match the contents of a quoted string
 qcont(X) ->
-    either(rfc2234, quoted_pair, rfc2234, qtext, X,
-           "quoted text or quoted pair").
+    parserlang:either(rfc2234, quoted_pair, rfc2234, qtext, X,
+                      "quoted text or quoted pair").
 
 %% a binary which is valid in a quoted string
 qtext(X) when is_binary(X) ->
