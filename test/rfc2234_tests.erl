@@ -76,59 +76,6 @@ int_list_to_pass_set(L) -> lists:map(fun(X) -> {<<X>>, X, <<>>} end, L).
 % turns a set of binaries into a pass set
 bin_list_to_pass_set(L) -> lists:map(fun(X) -> {X, X, <<>>} end, L).
 
-%%%%%%%%%%%%%%%%%%%%%%%
-%%% Generic Parsers %%%
-%%%%%%%%%%%%%%%%%%%%%%%
-
-% test case insensitive charcter matches
-case_char_test_() ->
-    [ lists:map(
-        fun(X) ->
-            [ ?_assertEqual({X, <<>>}, rfc2234:case_char(X, <<X>>)),
-              ?_assertEqual({X + 32, <<>>},
-                            rfc2234:case_char(X, <<(X + 32)>>)) ]
-        end,
-        lists:seq(65, 90)),
-      lists:map(fun(X) ->
-        lists:map(fun(Y) ->
-            ?_assertThrow({parse_error, expected, X},
-                          rfc2234:case_char(X, <<Y>>))
-                  end,
-                  lists:subtract(alphaset(), [X, X+32]))
-                end,
-                lists:seq(65, 90)),
-      lists:map(
-        fun(X) -> ?_assertError({badarg, _}, rfc2234:case_char(X, <<>>)) end,
-        noninteger_typeset()),
-      lists:map(
-        fun(X) -> ?_assertError({badarg, _}, rfc2234:case_char(97, X)) end,
-        nonbinary_typeset())
-    ].
-
-% test case insensitive string matches
-case_string_test_() ->
-    [ lists:map(fun({Match, In}) ->
-                       ?_assertEqual({In, <<>>},
-                       rfc2234:case_string(Match, In))
-               end,
-               [ { <<"abc">>, <<"abc">> },
-                 { <<"XyZ">>, <<"xyz">> },
-                 { <<"ijk">>, <<"Ijk">> } ]),
-      lists:map(fun({Match, In}) ->
-                        ?_assertThrow({parse_error, expected, _},
-                                      rfc2234:case_string(Match, In))
-                end,
-                [ { <<"abc">>, <<"ab">> },
-                  { <<"ihj">>, <<"abc">> },
-                  { <<"abd">>, <<"abc">> } ]),
-      lists:map(
-        fun(X) -> ?_assertError({badarg, _}, rfc2234:case_string(X, <<>>)) end,
-        nonbinary_typeset()),
-      lists:map(
-        fun(X) -> ?_assertError({badarg, _}, rfc2234:case_string(<<>>, X)) end,
-        nonbinary_typeset())
-    ].
-
 %%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Primitive Parsers %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%

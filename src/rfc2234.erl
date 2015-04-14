@@ -10,10 +10,7 @@
 
 -module(rfc2234).
 %-compile(export_all).
--export([% generic parsers
-         case_char/2, case_string/2,
-
-         % primitive parsers
+-export([% primitive parsers
          alpha/1, bit/1, character/1, cr/1, lf/1, crlf/1, ctl/1, dquote/1,
          hexdig/1, htab/1, lwsp/1, octet/1, sp/1, vchar/1, wsp/1,
 
@@ -22,46 +19,6 @@
 
          % useful additions
          quoted_pair/1, quoted_string/1]).
-
-
-%% converts an uppercase character to its lowercase version, if
-%% it is not an uppercase character no change is performed
-to_lower(C) when C >= 65 andalso C =< 90 -> C + 32;
-to_lower(C) -> C.
-
-%%%%%%%%%%%%%%%%%%%%%%%
-%%% Generic Parsers %%%
-%%%%%%%%%%%%%%%%%%%%%%%
-
-%% case insensitive character match
-case_char(C, S) when is_binary(S) andalso is_integer(C) ->
-    <<H, T/binary>> = S,
-    case to_lower(H) == to_lower(C) of
-        true -> {H,T};
-        false -> throw({parse_error, expected, C})
-    end;
-case_char(C, _) when not is_integer(C) -> error({badarg, C});
-case_char(_, S) -> error({badarg, S}).
-
-%% case insensitive string match
-case_string(<<>>, L) when is_binary(L) -> {<<>>, L};
-case_string(S, <<>>) when is_binary(S) ->
-    throw({parse_error, expected, S});
-case_string(S, L) when is_binary(L) andalso is_binary(S) ->
-    <<SH, ST/binary>> = S,
-    try
-        {LH, LT} = case_char(SH, L),
-        {RH, RT} = case_string(ST, LT),
-        {<<LH,RH/binary>>, RT}
-    catch
-        {parse_error, expected, SH} ->
-            throw({parse_error, expected, S});
-        {parse_error, expected, NT} ->
-            throw({parse_error, expected, NT})
-    end;
-case_string(S, _) when not is_binary(S) -> error({badarg, S});
-case_string(_, L) -> error({badarg, L}).
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Primitive Parsers %%%
