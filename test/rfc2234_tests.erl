@@ -97,6 +97,9 @@ bit_test_() -> ?single_binary_parser_test_(bit, [48, 49]).
 %% test character/1, accepts a 7-bit character excluding NUL [1..127]
 character_test_() -> ?single_binary_parser_test_(character, lists:seq(1, 127)).
 
+%% tes digit/1, accept digits [48..57]
+digit_test_() -> ?single_binary_parser_test_(digit, lists:seq($0, $9)).
+
 %% test cr/1, accepts \r [13]
 cr_test_() -> ?single_binary_parser_test_(cr, [13]).
 

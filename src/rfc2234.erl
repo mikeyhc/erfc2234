@@ -11,8 +11,8 @@
 -module(rfc2234).
 %-compile(export_all).
 -export([% primitive parsers
-         alpha/1, bit/1, character/1, cr/1, lf/1, crlf/1, ctl/1, dquote/1,
-         hexdig/1, htab/1, lwsp/1, octet/1, sp/1, vchar/1, wsp/1,
+         alpha/1, bit/1, character/1, digit/1, cr/1, lf/1, crlf/1, ctl/1,
+         dquote/1, hexdig/1, htab/1, lwsp/1, octet/1, sp/1, vchar/1, wsp/1,
 
          % helper parsers
          qcont/1, qtext/1, lwsp_/1,
@@ -48,6 +48,14 @@ character(X) when is_binary(X) ->
        true -> throw({parse_error, expected, "7-bit character excluding NUL"})
     end;
 character(X) -> error({badarg, X}).
+
+%% match any digit
+digit(X) when is_binary(X) ->
+    <<H, T/binary>> = X,
+    if H >= $0 andalso H =< $9 -> {H, T};
+       true -> throw({parse_error, expected, "digit"})
+    end;
+digit(X) -> error({badarg, X}).
 
 %% match the carriage return character "\r"
 cr(X) when is_binary(X) ->
