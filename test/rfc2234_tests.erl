@@ -112,8 +112,8 @@ crlf_test_() ->
     Passes = bin_list_to_pass_set(Codes),
     ?parser_test_(crlf, Passes, gen_rand_n(10, 2, Codes), nonbinary_typeset()).
 
-%% test crl/1, accepts US-ASCII control charcters [0..31,127]
-crl_test_() -> ?single_binary_parser_test_(ctl, lists:seq(0, 31)).
+%% test ctl/1, accepts US-ASCII control charcters [0..31,127]
+ctl_test_() -> ?single_binary_parser_test_(ctl, lists:seq(0, 31) ++ [127]).
 
 %% test dquote/1, accepts " [34]
 dquote_test_() -> ?single_binary_parser_test_(dquote, [34]).
@@ -182,7 +182,8 @@ quoted_string_test_() ->
 %% test qtext/1, accepts any character that is not \r \n or "
 qtext_test_() ->
     Fails = [<<10>>, <<13>>, <<34>>],
-    Passes = bin_list_to_pass_set(gen_rand_n(10, 1, Fails)),
+    Passes = lists:map(fun(<<X>>) -> {<<X>>, X, <<>>} end,
+                       gen_rand_n(10, 1, Fails)),
     ?parser_test_(qtext, Passes, Fails, nonbinary_typeset()).
 
 %% test qcont/1, it accepts either a 'qtext' or a 'quoted_pair'
@@ -190,9 +191,11 @@ qcont_test_() ->
     SingleFails = [<<"\r">>, <<"\n">>, <<"\"">> ],
     DoubleFails = [<<"\\\n">>, <<"\\\r">>],
     Fails = lists:concat([SingleFails, DoubleFails]),
-    Passes = bin_list_to_pass_set(
-               lists:concat([ gen_rand_n(5, 1, SingleFails),
-                              lists:map(fun(X) -> <<"\\", X/binary>> end,
-                                        gen_rand_n(5, 1, [<<"\n">>, <<"\r">>]))
-                            ])),
-    ?test_helper_(rfc2234, qcont, Passes, Fails, nonbinary_typeset()).
+    SinglePasses = lists:map(fun(<<Y>>) -> {<<Y>>, Y, <<>>} end,
+                             gen_rand_n(5, 1, SingleFails)),
+    DoublePasses = lists:map(fun(Y) -> {Y, Y, <<>>} end,
+                             lists:map(fun(X) -> <<"\\", X/binary>> end,
+                                       gen_rand_n(5, 1, [<<"\n">>, <<"\r">>]))
+                            ),
+    ?test_helper_(rfc2234, qcont, SinglePasses ++ DoublePasses, Fails,
+                  nonbinary_typeset()).

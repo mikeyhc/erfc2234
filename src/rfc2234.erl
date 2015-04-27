@@ -15,7 +15,7 @@
          dquote/1, hexdig/1, htab/1, lwsp/1, octet/1, sp/1, vchar/1, wsp/1,
 
          % helper parsers
-         qcont/1, qtext/1, lwsp_/1,
+         qcont/1, qtext/1,
 
          % useful additions
          quoted_pair/1, quoted_string/1]).
@@ -25,23 +25,26 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% match any character of the alphabet
+-spec alpha(<<_:8,_:_*8>>) -> {65..90 | 97..122, binary()}.
 alpha(X) when is_binary(X) ->
     <<H, T/binary>> = X,
-    if H >= 65 andalso H =< 90 orelse
-       H >= 97 andalso H =< 122 -> {H, T};
+    if H >= $A andalso H =< $Z orelse
+       H >= $a andalso H =< $z -> {H, T};
        true -> throw({parse_error, expected, "alphabetic character"})
     end;
 alpha(X) -> error({badarg, X}).
 
 %% match either "1" or "0"
+-spec bit(<<_:8,_:_*8>>) -> {48..49, binary()}.
 bit(X) when is_binary(X) ->
     <<H, T/binary>> = X,
-    if H == 48 orelse H == 49  -> {H, T};
+    if H == $0 orelse H == $1  -> {H, T};
        true -> throw({parse_error, expected, "bit ('0' or '1')"})
     end;
 bit(X) -> error({badarg, X}).
 
 %% match any 7-bit US-ASCII character except for NUL (ASCII value 0, that is)
+-spec character(<<_:8,_:_*8>>) -> {1..127, binary()}.
 character(X) when is_binary(X) ->
     <<H, T/binary>> = X,
     if H >= 1 andalso H =< 127 -> {H, T};
@@ -50,6 +53,7 @@ character(X) when is_binary(X) ->
 character(X) -> error({badarg, X}).
 
 %% match any digit
+-spec digit(<<_:8,_:_*8>>) -> {48..57, binary()}.
 digit(X) when is_binary(X) ->
     <<H, T/binary>> = X,
     if H >= $0 andalso H =< $9 -> {H, T};
@@ -58,22 +62,25 @@ digit(X) when is_binary(X) ->
 digit(X) -> error({badarg, X}).
 
 %% match the carriage return character "\r"
+-spec cr(<<_:8,_:_*8>>) -> {13, binary()}.
 cr(X) when is_binary(X) ->
     <<H, T/binary>> = X,
-    if H == 13 -> {H, T};
+    if H == $\r -> {H, T};
        true    -> throw({parse_error, expected, "carriage return"})
     end;
 cr(X) -> error({badarg, X}).
 
 %% match the linefeed character "\n"
+-spec lf(<<_:8,_:_*8>>) -> {10, binary()}.
 lf(X) when is_binary(X) ->
     <<H, T/binary>> = X,
-    if H == 10 -> {H, T};
+    if H == $\n -> {H, T};
        true -> throw({parse_error, expected, "linefeed"})
     end;
 lf(X) -> error({badarg, X}).
 
 %% match the internet newline
+-spec crlf(<<_:8,_:_*8>>) -> {<<_:16>>, binary()}.
 crlf(X) when is_binary(X) ->
     <<H, I, T/binary>> = X,
     try
@@ -89,6 +96,7 @@ crlf(X) -> error({badarg, X}).
 
 %% match any US-ASCII control character. That is any character with a
 %% decimal value in the range of [0..31, 127]
+-spec ctl(<<_:8,_:_*8>>) -> {0..31 | 127, binary()}.
 ctl(X) when is_binary(X) ->
     <<H, T/binary>> = X,
     if H >= 0 andalso H =< 31 orelse H == 127 -> {H, T};
@@ -97,28 +105,31 @@ ctl(X) when is_binary(X) ->
 ctl(X) -> error({badarg, X}).
 
 %% match the double quote character """
+-spec dquote(<<_:8,_:_*8>>) -> {34, binary()}.
 dquote(X) when is_binary(X) ->
     <<H, T/binary>> = X,
-    if H == 34 -> {H, T};
+    if H == $" -> {H, T};
        true -> throw({parse_error, expected, "double quotes"})
     end;
 dquote(X) -> error({badarg, X}).
 
 %% match any character that is a valid hexidecimal number;
 %% ['0'..'9'] and ['A'..'F','a'..'f'].
+-spec hexdig(<<_:8,_:_*8>>) -> {48..57 | 65..70 | 97..102, binary()}.
 hexdig(X) when is_binary(X) ->
     <<H, T/binary>> = X,
-    if H >= 48 andalso H =< 57 orelse
-       H >= 65 andalso H =< 70 orelse
-       H >= 97 andalso H =< 102 -> {H, T};
+    if H >= $0 andalso H =< $9 orelse
+       H >= $A andalso H =< $F orelse
+       H >= $a andalso H =< $f -> {H, T};
        true -> throw({parse_error, expected, "hexidecimal digit"})
     end;
 hexdig(X) -> error({badarg, X}).
 
 %% match the tab "\t" character
+-spec htab(<<_:8,_:_*8>>) -> {9, binary()}.
 htab(X) when is_binary(X) ->
     <<H, T/binary>> = X,
-    if H == 9 -> {H, T};
+    if H == $\t -> {H, T};
        true -> throw({parse_error, expected, "horizontal tab"})
     end;
 htab(X) -> error({badarg, X}).
@@ -126,33 +137,40 @@ htab(X) -> error({badarg, X}).
 
 %% match "linear white-space". That is any number of consecutive 'wsp',
 %% optionally followed by a 'crlf' and (at least) one more 'wsp'.
+-spec lwsp(binary()) -> {binary(), binary()}.
 lwsp(X) when is_binary(X) ->
-    {H1, T1} = parserlang:option(<<>>, parserlang, many, [rfc2234, wsp, X]),
-    {H2, T2} = try
-                   parserlang:both(rfc2234, crlf, rfc2234, lwsp_, T1,
-                                   "crlf followed by whitespace")
-               catch
-                   {parse_error, expected, _} -> {<<>>, T1}
-               end,
-    {<<H1/binary, H2/binary>>, T2};
+    {H1, T1} = parserlang:option([],
+                                 fun (Y) -> parserlang:many(fun wsp/1, Y) end,
+                                 X),
+    {{H2, H3}, T2} = try
+                         parserlang:both(fun crlf/1,
+                                         fun(Y) ->
+                                                 parserlang:many1(fun wsp/1, Y)
+                                         end,
+                                         T1, "crlf followed by whitespace")
+                     catch
+                         {parse_error, expected, _} -> {{<<>>,[]}, T1}
+                     end,
+    {parserlang:bin_concat(H1 ++ [H2] ++ H3), T2};
 lwsp(X) -> error({badarg, X}).
 
-lwsp_(X) -> parserlang:many1(rfc2234, wsp, X).
-
 %% match any character
+-spec octet(<<_:8,_:_*8>>) -> {byte(), binary()}.
 octet(X) when is_binary(X) -> <<H, T/binary>> = X, {H, T};
 octet(X) -> error({badarg, X}).
 
 %% match the space.
+-spec sp(<<_:8,_:_*8>>) -> {32, binary()}.
 sp(X) when is_binary(X) ->
     <<H, T/binary>> = X,
-    if H == 32 -> {H, T};
+    if H == $  -> {H, T};
        true -> throw({parse_error, expected, "space"})
     end;
 sp(X) -> error({badarg, X}).
 
 %% match any printable ASCII character. (The "v" stands for "visible".)
 %% That is any character in the decimal range of [33..126]
+-spec vchar(<<_:8,_:_*8>>) -> {33..126, binary()}.
 vchar(X) when is_binary(X) ->
     <<H, T/binary>> = X,
     if H >= 33 andalso H =< 126 -> {H, T};
@@ -161,8 +179,9 @@ vchar(X) when is_binary(X) ->
 vchar(X) -> error({badarg, X}).
 
 %% match either 'sp' or 'htab'
+-spec wsp(<<_:8,_:_*8>>) -> {9 | 32, binary()}.
 wsp(X) when is_binary(X) ->
-    parserlang:either(rfc2234, sp, rfc2234, htab, X, "white-space");
+    parserlang:either(fun sp/1, fun htab/1, X, "white-space");
 wsp(X) -> error({badarg, X}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%
@@ -170,6 +189,7 @@ wsp(X) -> error({badarg, X}).
 %%%%%%%%%%%%%%%%%%%%%%%%
 
 %% match a "quoted pair". Any characters (excluding CR and LF) may be quoted.
+-spec quoted_pair(<<_:16,_:_*8>>) -> {<<_:16>>, binary()}.
 quoted_pair(X)  when is_binary(X) ->
     try
         <<H, I, T/binary>> = X,
@@ -184,23 +204,26 @@ quoted_pair(X) -> error({badarg, X}).
 
 %% matches a quoted string. The specials "\" and """ must be escaped inside
 %% a quoted string; CR and LF are not allowed at all
+-spec quoted_string(<<_:16,_:_*8>>) -> {<<_:16,_:_*8>>, binary()}.
 quoted_string(X) when is_binary(X) ->
     {OQ, T1} = dquote(X),
-    {C, T2} = parserlang:many(rfc2234, qcont, T1),
+    {C, T2} = parserlang:many(fun qcont/1, T1),
     {CQ, T3} = dquote(T2),
-    {<<OQ,C/binary,CQ>>, T3};
+    {parserlang:bin_concat([OQ|C] ++ [CQ]), T3};
 quoted_string(X) -> error({badarg, X}).
 
 %% match the contents of a quoted string
+-spec qcont(<<_:16,_:_*8>>) -> {byte() | <<_:16>>, binary()}.
 qcont(X) ->
-    parserlang:either(rfc2234, quoted_pair, rfc2234, qtext, X,
+    parserlang:either(fun quoted_pair/1, fun qtext/1, X,
                       "quoted text or quoted pair").
 
 %% a binary which is valid in a quoted string
+-spec qtext(<<_:8,_:_*8>>) -> {byte(), binary()}.
 qtext(X) when is_binary(X) ->
     <<H, T/binary>> = X,
     if H == 10 orelse H == 13 orelse H == 34 orelse H == 92 ->
            throw({parse_error, expected, "quoted text"});
-       true -> {<<H>>, T}
+       true -> {H, T}
     end;
 qtext(X) -> error({badarg, X}).
