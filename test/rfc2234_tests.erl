@@ -34,17 +34,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% genertes N random bytestrings of length M, filtered against L
+gen_rand_n(0, _, _) -> [];
 gen_rand_n(N, M, L) ->
-    <<A:32, B:32, C:32>> = crypto:strong_rand_bytes(12),
-    rand:seed(A, B, C),
-    gen_rand_n_(N, M, L).
-
-gen_rand_n_(0, _, _) -> [];
-gen_rand_n_(N, M, L) ->
     H = gen_rand_m(M),
     case lists:member(H,L) of
-        true  -> gen_rand_n_(N, M, L);
-        false -> [H|gen_rand_n_(N-1, M, L)]
+        true  -> gen_rand_n(N, M, L);
+        false -> [H|gen_rand_n(N-1, M, L)]
     end.
 
 gen_rand_m(0) -> <<>>;
