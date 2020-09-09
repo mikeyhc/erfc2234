@@ -4,7 +4,6 @@
 %% author: mikeyhc <mikeyhc@atmosia.net>
 
 -module(rfc2234_tests).
--compile([export_all]).
 -include_lib("eunit/include/eunit.hrl").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -36,8 +35,8 @@
 
 %% genertes N random bytestrings of length M, filtered against L
 gen_rand_n(N, M, L) ->
-    <<A:32, B:32, C:32>> = crypto:rand_bytes(12),
-    random:seed(A, B, C),
+    <<A:32, B:32, C:32>> = crypto:strong_rand_bytes(12),
+    rand:seed(A, B, C),
     gen_rand_n_(N, M, L).
 
 gen_rand_n_(0, _, _) -> [];
@@ -49,23 +48,12 @@ gen_rand_n_(N, M, L) ->
     end.
 
 gen_rand_m(0) -> <<>>;
-gen_rand_m(M) -> <<(random:uniform(256) - 1),
+gen_rand_m(M) -> <<(rand:uniform(256) - 1),
                    (gen_rand_m(M - 1))/binary>>.
 
 %% the list of the alphabet
 alphaset() -> lists:append(lists:seq(65, 90),   % A-Z
                            lists:seq(97, 122)). % a-z
-
-%% all 8 bit chars
-list_1() -> lists:map(fun(X) -> <<X>> end, lists:seq(0, 255)).
-
-%% all 8 bit strings of length 2
-list_2() -> lists:concat(lists:map(fun(X) ->
-                lists:map(fun(Y) -> <<X,Y>> end, lists:seq(0, 255))
-                end, lists:seq(0,255))).
-
-%% the list of all common types which are not integers
-noninteger_typeset() -> [ [], <<>>,  a, "", 0.0, fun() -> {} end, {a, typle} ].
 
 %% the list of all common types which are not binary
 nonbinary_typeset() -> [ [], 0, a, "", 0.0, fun() -> {} end, {a, tuple}].
